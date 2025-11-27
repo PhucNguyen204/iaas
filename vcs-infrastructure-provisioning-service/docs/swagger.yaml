@@ -1,0 +1,1647 @@
+openapi: 3.0.3
+info:
+  title: VCS Infrastructure Provisioning Service API
+  description: |
+    API documentation for VCS Infrastructure Provisioning Service.
+    This service manages infrastructure resources including PostgreSQL clusters, Nginx instances, Docker services, and stacks.
+    
+    ## Features
+    - PostgreSQL Cluster Management (WAL streaming replication)
+    - Nginx Load Balancer Management
+    - Docker Service Management
+    - Stack Template Management
+    - Database & User Management
+    
+  version: 1.0.0
+  contact:
+    name: VCS Infrastructure Team
+    email: support@vcs.com
+
+servers:
+  - url: http://localhost:8083/api/v1
+    description: Development server
+  - url: http://localhost:8083
+    description: Health check endpoint
+
+tags:
+  - name: Health
+    description: Health check endpoint
+  - name: PostgreSQL
+    description: Single PostgreSQL instance management
+  - name: PostgreSQL Cluster
+    description: PostgreSQL cluster management with replication
+  - name: PostgreSQL Database
+    description: Database operations within PostgreSQL instances
+  - name: Nginx
+    description: Nginx load balancer and reverse proxy management
+  - name: Docker Service
+    description: Docker container service management
+  - name: Stack
+    description: Multi-service stack management
+
+security:
+  - BearerAuth: []
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token obtained from authentication service
+
+  schemas:
+    APIResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          description: Indicates if the request was successful
+        code:
+          type: string
+          description: Response code
+        message:
+          type: string
+          description: Human-readable message
+        data:
+          type: object
+          description: Response data
+        error:
+          type: string
+          description: Error message if request failed
+
+    # PostgreSQL Cluster Schemas
+    CreateClusterRequest:
+      type: object
+      required:
+        - cluster_name
+        - postgres_version
+        - node_count
+        - cpu_per_node
+        - memory_per_node
+        - storage_per_node
+        - postgres_password
+      properties:
+        cluster_name:
+          type: string
+          example: "prod-cluster"
+        postgres_version:
+          type: string
+          example: "15"
+        node_count:
+          type: integer
+          minimum: 1
+          example: 3
+        cpu_per_node:
+          type: integer
+          example: 512
+          description: CPU in millicores
+        memory_per_node:
+          type: integer
+          example: 536870912
+          description: Memory in bytes
+        storage_per_node:
+          type: integer
+          example: 10737418240
+          description: Storage in bytes
+        postgres_password:
+          type: string
+          format: password
+          example: "securepass123"
+        replication_mode:
+          type: string
+          enum: [async, sync]
+          default: async
+          example: "async"
+
+    ClusterInfo:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        cluster_name:
+          type: string
+        status:
+          type: string
+          enum: [creating, running, stopped, failed]
+        version:
+          type: string
+        node_count:
+          type: integer
+        replication_mode:
+          type: string
+        nodes:
+          type: array
+          items:
+            $ref: '#/components/schemas/ClusterNode'
+        write_endpoint:
+          $ref: '#/components/schemas/ConnectionPoint'
+        read_endpoints:
+          type: array
+          items:
+            $ref: '#/components/schemas/ConnectionPoint'
+        created_at:
+          type: string
+          format: date-time
+
+    ClusterNode:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        role:
+          type: string
+          enum: [primary, replica]
+        port:
+          type: integer
+        container_id:
+          type: string
+        is_healthy:
+          type: boolean
+
+    ConnectionPoint:
+      type: object
+      properties:
+        host:
+          type: string
+          example: "localhost"
+        port:
+          type: integer
+          example: 32768
+        node_id:
+          type: string
+          format: uuid
+        node_role:
+          type: string
+          enum: [primary, replica]
+
+    ScaleClusterRequest:
+      type: object
+      required:
+        - node_count
+      properties:
+        node_count:
+          type: integer
+          minimum: 1
+          example: 5
+
+    PromoteReplicaRequest:
+      type: object
+      required:
+        - new_primary_node_id
+      properties:
+        new_primary_node_id:
+          type: string
+          format: uuid
+
+    UpdateClusterConfigRequest:
+      type: object
+      properties:
+        replication_mode:
+          type: string
+          enum: [async, sync]
+
+    CreateUserRequest:
+      type: object
+      required:
+        - username
+        - password
+      properties:
+        username:
+          type: string
+          example: "appuser"
+        password:
+          type: string
+          format: password
+          example: "userpass123"
+        roles:
+          type: array
+          items:
+            type: string
+          example: ["LOGIN", "CREATEDB"]
+
+    CreateDatabaseRequest:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          example: "appdb"
+        owner:
+          type: string
+          example: "postgres"
+        encoding:
+          type: string
+          default: "UTF8"
+          example: "UTF8"
+
+    ReplicationStatus:
+      type: object
+      properties:
+        primary_node:
+          type: object
+          properties:
+            node_id:
+              type: string
+            role:
+              type: string
+            status:
+              type: string
+        replicas:
+          type: array
+          items:
+            type: object
+            properties:
+              node_id:
+                type: string
+              role:
+                type: string
+              replication_state:
+                type: string
+              replication_lag:
+                type: string
+
+    # Nginx Schemas
+    CreateNginxRequest:
+      type: object
+      required:
+        - nginx_name
+        - nginx_version
+      properties:
+        nginx_name:
+          type: string
+          example: "lb-production"
+        nginx_version:
+          type: string
+          example: "1.25-alpine"
+        cpu:
+          type: integer
+          example: 256
+        memory:
+          type: integer
+          example: 268435456
+        port:
+          type: integer
+          example: 0
+          description: Host port (0 for auto-assign)
+        config:
+          type: object
+          properties:
+            worker_processes:
+              type: string
+              example: "auto"
+            worker_connections:
+              type: integer
+              example: 1024
+
+    NginxInfo:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        nginx_name:
+          type: string
+        nginx_version:
+          type: string
+        status:
+          type: string
+        port:
+          type: integer
+        endpoint:
+          type: string
+          example: "http://localhost:8080"
+
+    AddDomainRequest:
+      type: object
+      required:
+        - domain
+      properties:
+        domain:
+          type: string
+          example: "api.example.com"
+        ssl_enabled:
+          type: boolean
+          default: false
+
+    AddRouteRequest:
+      type: object
+      required:
+        - path
+        - upstream
+        - domain
+      properties:
+        path:
+          type: string
+          example: "/api"
+        upstream:
+          type: string
+          example: "http://backend:8080"
+        domain:
+          type: string
+          example: "api.example.com"
+        methods:
+          type: array
+          items:
+            type: string
+          example: ["GET", "POST"]
+
+    UpdateUpstreamsRequest:
+      type: object
+      required:
+        - upstreams
+      properties:
+        upstreams:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              servers:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    address:
+                      type: string
+                    weight:
+                      type: integer
+              load_balance_method:
+                type: string
+                enum: [round_robin, least_conn, ip_hash]
+
+    SetSecurityPolicyRequest:
+      type: object
+      properties:
+        rate_limit:
+          type: object
+          properties:
+            enabled:
+              type: boolean
+            requests_per_second:
+              type: integer
+        ip_whitelist:
+          type: array
+          items:
+            type: string
+
+    # Docker Service Schemas
+    CreateDockerServiceRequest:
+      type: object
+      required:
+        - service_name
+        - image_name
+        - image_tag
+      properties:
+        service_name:
+          type: string
+          example: "redis-cache"
+        image_name:
+          type: string
+          example: "redis"
+        image_tag:
+          type: string
+          example: "7-alpine"
+        cpu:
+          type: integer
+          example: 256
+        memory:
+          type: integer
+          example: 268435456
+        ports:
+          type: array
+          items:
+            type: object
+            properties:
+              container_port:
+                type: integer
+              host_port:
+                type: integer
+              protocol:
+                type: string
+        environment:
+          type: object
+          additionalProperties:
+            type: string
+        networks:
+          type: array
+          items:
+            type: string
+        health_check:
+          type: object
+          properties:
+            test:
+              type: string
+            interval:
+              type: string
+            timeout:
+              type: string
+            retries:
+              type: integer
+
+    DockerServiceInfo:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        service_name:
+          type: string
+        image_name:
+          type: string
+        image_tag:
+          type: string
+        status:
+          type: string
+        container_id:
+          type: string
+        port_mappings:
+          type: array
+          items:
+            type: object
+            properties:
+              container_port:
+                type: integer
+              host_port:
+                type: integer
+              protocol:
+                type: string
+        endpoint:
+          type: string
+          example: "localhost:32768"
+
+    UpdateEnvVarsRequest:
+      type: object
+      required:
+        - environment
+      properties:
+        environment:
+          type: object
+          additionalProperties:
+            type: string
+
+    # Stack Schemas
+    CreateStackRequest:
+      type: object
+      required:
+        - stack_name
+        - template_id
+      properties:
+        stack_name:
+          type: string
+          example: "production-stack"
+        template_id:
+          type: string
+          format: uuid
+        parameters:
+          type: object
+          additionalProperties:
+            type: string
+
+    StackInfo:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        stack_name:
+          type: string
+        status:
+          type: string
+        resources:
+          type: array
+          items:
+            type: object
+            properties:
+              resource_type:
+                type: string
+              resource_id:
+                type: string
+              status:
+                type: string
+
+paths:
+  /health:
+    get:
+      tags:
+        - Health
+      summary: Health check
+      description: Check if the service is running
+      security: []
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "ok"
+
+  # PostgreSQL Cluster Endpoints
+  /api/v1/postgres/cluster:
+    post:
+      tags:
+        - PostgreSQL Cluster
+      summary: Create PostgreSQL cluster
+      description: Create a new PostgreSQL cluster with specified number of nodes and WAL streaming replication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateClusterRequest'
+      responses:
+        '200':
+          description: Cluster created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/APIResponse'
+        '400':
+          description: Invalid request
+        '401':
+          description: Unauthorized
+
+  /api/v1/postgres/cluster/{id}:
+    get:
+      tags:
+        - PostgreSQL Cluster
+      summary: Get cluster information
+      description: Get detailed information about a PostgreSQL cluster including nodes and endpoints
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Cluster information
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/APIResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/ClusterInfo'
+        '404':
+          description: Cluster not found
+
+    delete:
+      tags:
+        - PostgreSQL Cluster
+      summary: Delete cluster
+      description: Delete a PostgreSQL cluster and all its nodes
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Cluster deleted successfully
+        '404':
+          description: Cluster not found
+
+  /api/v1/postgres/cluster/{id}/start:
+    post:
+      tags:
+        - PostgreSQL Cluster
+      summary: Start cluster
+      description: Start all nodes in the cluster
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Cluster started successfully
+        '404':
+          description: Cluster not found
+
+  /api/v1/postgres/cluster/{id}/stop:
+    post:
+      tags:
+        - PostgreSQL Cluster
+      summary: Stop cluster
+      description: Stop all nodes in the cluster
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Cluster stopped successfully
+        '404':
+          description: Cluster not found
+
+  /api/v1/postgres/cluster/{id}/restart:
+    post:
+      tags:
+        - PostgreSQL Cluster
+      summary: Restart cluster
+      description: Restart all nodes in the cluster
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Cluster restarted successfully
+        '404':
+          description: Cluster not found
+
+  /api/v1/postgres/cluster/{id}/scale:
+    post:
+      tags:
+        - PostgreSQL Cluster
+      summary: Scale cluster
+      description: Scale the cluster by adding or removing replica nodes
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ScaleClusterRequest'
+      responses:
+        '200':
+          description: Cluster scaled successfully
+        '400':
+          description: Invalid request
+        '404':
+          description: Cluster not found
+
+  /api/v1/postgres/cluster/{id}/failover:
+    post:
+      tags:
+        - PostgreSQL Cluster
+      summary: Promote replica to primary
+      description: Manually promote a replica node to become the new primary (failover)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PromoteReplicaRequest'
+      responses:
+        '200':
+          description: Failover completed successfully
+        '400':
+          description: Invalid request
+        '404':
+          description: Cluster not found
+
+  /api/v1/postgres/cluster/{id}/replication:
+    get:
+      tags:
+        - PostgreSQL Cluster
+      summary: Get replication status
+      description: Get the current replication status of all nodes
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Replication status
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/APIResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/ReplicationStatus'
+
+  /api/v1/postgres/cluster/{id}/stats:
+    get:
+      tags:
+        - PostgreSQL Cluster
+      summary: Get cluster statistics
+      description: Get performance statistics for the cluster
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Cluster statistics
+
+  /api/v1/postgres/cluster/{id}/logs:
+    get:
+      tags:
+        - PostgreSQL Cluster
+      summary: Get cluster logs
+      description: Get logs from all nodes in the cluster
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: lines
+          in: query
+          schema:
+            type: integer
+            default: 100
+      responses:
+        '200':
+          description: Cluster logs
+
+  /api/v1/postgres/cluster/{id}/endpoints:
+    get:
+      tags:
+        - PostgreSQL Cluster
+      summary: Get connection endpoints
+      description: Get connection endpoints for write (primary) and read (replicas)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Connection endpoints
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  write_endpoint:
+                    $ref: '#/components/schemas/ConnectionPoint'
+                  read_endpoints:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ConnectionPoint'
+
+  /api/v1/postgres/cluster/{id}/config:
+    put:
+      tags:
+        - PostgreSQL Cluster
+      summary: Update cluster configuration
+      description: Update cluster configuration such as replication mode
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateClusterConfigRequest'
+      responses:
+        '200':
+          description: Configuration updated successfully
+
+  /api/v1/postgres/cluster/{id}/users:
+    post:
+      tags:
+        - PostgreSQL Cluster
+      summary: Create database user
+      description: Create a new user in the PostgreSQL cluster
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateUserRequest'
+      responses:
+        '200':
+          description: User created successfully
+
+    get:
+      tags:
+        - PostgreSQL Cluster
+      summary: List users
+      description: List all users in the PostgreSQL cluster
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: List of users
+
+  /api/v1/postgres/cluster/{id}/users/{username}:
+    delete:
+      tags:
+        - PostgreSQL Cluster
+      summary: Delete user
+      description: Delete a user from the PostgreSQL cluster
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: username
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: User deleted successfully
+
+  /api/v1/postgres/cluster/{id}/databases:
+    post:
+      tags:
+        - PostgreSQL Cluster
+      summary: Create database
+      description: Create a new database in the PostgreSQL cluster
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateDatabaseRequest'
+      responses:
+        '200':
+          description: Database created successfully
+
+    get:
+      tags:
+        - PostgreSQL Cluster
+      summary: List databases
+      description: List all databases in the PostgreSQL cluster
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: List of databases
+
+  /api/v1/postgres/cluster/{id}/databases/{dbname}:
+    delete:
+      tags:
+        - PostgreSQL Cluster
+      summary: Delete database
+      description: Delete a database from the PostgreSQL cluster
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: dbname
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Database deleted successfully
+
+  # Nginx Endpoints
+  /api/v1/nginx:
+    post:
+      tags:
+        - Nginx
+      summary: Create Nginx instance
+      description: Create a new Nginx load balancer instance
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateNginxRequest'
+      responses:
+        '200':
+          description: Nginx instance created successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/APIResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/NginxInfo'
+
+  /api/v1/nginx/{id}:
+    get:
+      tags:
+        - Nginx
+      summary: Get Nginx information
+      description: Get detailed information about an Nginx instance
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Nginx information
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/APIResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/NginxInfo'
+
+    delete:
+      tags:
+        - Nginx
+      summary: Delete Nginx instance
+      description: Delete an Nginx instance
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Nginx instance deleted successfully
+
+  /api/v1/nginx/{id}/start:
+    post:
+      tags:
+        - Nginx
+      summary: Start Nginx
+      description: Start the Nginx service
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Nginx started successfully
+
+  /api/v1/nginx/{id}/stop:
+    post:
+      tags:
+        - Nginx
+      summary: Stop Nginx
+      description: Stop the Nginx service
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Nginx stopped successfully
+
+  /api/v1/nginx/{id}/restart:
+    post:
+      tags:
+        - Nginx
+      summary: Restart Nginx
+      description: Restart the Nginx service
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Nginx restarted successfully
+
+  /api/v1/nginx/{id}/config:
+    put:
+      tags:
+        - Nginx
+      summary: Update Nginx configuration
+      description: Update the Nginx configuration
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Configuration updated successfully
+
+  /api/v1/nginx/{id}/domains:
+    post:
+      tags:
+        - Nginx
+      summary: Add domain
+      description: Add a domain to the Nginx configuration
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddDomainRequest'
+      responses:
+        '200':
+          description: Domain added successfully
+
+  /api/v1/nginx/{id}/domains/{domain}:
+    delete:
+      tags:
+        - Nginx
+      summary: Delete domain
+      description: Remove a domain from the Nginx configuration
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: domain
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Domain deleted successfully
+
+  /api/v1/nginx/{id}/routes:
+    post:
+      tags:
+        - Nginx
+      summary: Add route
+      description: Add a routing rule to the Nginx configuration
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddRouteRequest'
+      responses:
+        '200':
+          description: Route added successfully
+
+  /api/v1/nginx/{id}/routes/{route_id}:
+    put:
+      tags:
+        - Nginx
+      summary: Update route
+      description: Update an existing routing rule
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: route_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddRouteRequest'
+      responses:
+        '200':
+          description: Route updated successfully
+
+    delete:
+      tags:
+        - Nginx
+      summary: Delete route
+      description: Remove a routing rule
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: route_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Route deleted successfully
+
+  /api/v1/nginx/{id}/upstreams:
+    put:
+      tags:
+        - Nginx
+      summary: Update upstreams
+      description: Update the upstream server configuration
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateUpstreamsRequest'
+      responses:
+        '200':
+          description: Upstreams updated successfully
+
+    get:
+      tags:
+        - Nginx
+      summary: Get upstreams
+      description: Get the current upstream configuration
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Upstream configuration
+
+  /api/v1/nginx/{id}/security:
+    post:
+      tags:
+        - Nginx
+      summary: Set security policy
+      description: Configure security policies like rate limiting
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SetSecurityPolicyRequest'
+      responses:
+        '200':
+          description: Security policy set successfully
+
+    get:
+      tags:
+        - Nginx
+      summary: Get security policy
+      description: Get the current security policy configuration
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Security policy
+
+    delete:
+      tags:
+        - Nginx
+      summary: Delete security policy
+      description: Remove security policy configuration
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Security policy deleted successfully
+
+  /api/v1/nginx/{id}/certificate:
+    post:
+      tags:
+        - Nginx
+      summary: Upload SSL certificate
+      description: Upload SSL certificate for HTTPS
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                domain:
+                  type: string
+                certificate:
+                  type: string
+                  format: binary
+                private_key:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: Certificate uploaded successfully
+
+    get:
+      tags:
+        - Nginx
+      summary: Get certificate information
+      description: Get information about uploaded SSL certificates
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Certificate information
+
+  /api/v1/nginx/{id}/logs:
+    get:
+      tags:
+        - Nginx
+      summary: Get Nginx logs
+      description: Get access and error logs from Nginx
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: lines
+          in: query
+          schema:
+            type: integer
+            default: 100
+      responses:
+        '200':
+          description: Nginx logs
+
+  /api/v1/nginx/{id}/metrics:
+    get:
+      tags:
+        - Nginx
+      summary: Get Nginx metrics
+      description: Get performance metrics from Nginx
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Nginx metrics
+
+  /api/v1/nginx/{id}/stats:
+    get:
+      tags:
+        - Nginx
+      summary: Get Nginx statistics
+      description: Get detailed statistics from Nginx
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Nginx statistics
+
+  # Docker Service Endpoints
+  /api/v1/docker:
+    post:
+      tags:
+        - Docker Service
+      summary: Create Docker service
+      description: Create a new Docker container service
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateDockerServiceRequest'
+      responses:
+        '200':
+          description: Docker service created successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/APIResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/DockerServiceInfo'
+
+  /api/v1/docker/{id}:
+    get:
+      tags:
+        - Docker Service
+      summary: Get Docker service information
+      description: Get detailed information about a Docker service
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Docker service information
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/APIResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/DockerServiceInfo'
+
+    delete:
+      tags:
+        - Docker Service
+      summary: Delete Docker service
+      description: Delete a Docker service and its container
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Docker service deleted successfully
+
+  /api/v1/docker/{id}/start:
+    post:
+      tags:
+        - Docker Service
+      summary: Start Docker service
+      description: Start the Docker container
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Docker service started successfully
+
+  /api/v1/docker/{id}/stop:
+    post:
+      tags:
+        - Docker Service
+      summary: Stop Docker service
+      description: Stop the Docker container
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Docker service stopped successfully
+
+  /api/v1/docker/{id}/restart:
+    post:
+      tags:
+        - Docker Service
+      summary: Restart Docker service
+      description: Restart the Docker container
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Docker service restarted successfully
+
+  /api/v1/docker/{id}/env:
+    put:
+      tags:
+        - Docker Service
+      summary: Update environment variables
+      description: Update environment variables for the Docker service
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateEnvVarsRequest'
+      responses:
+        '200':
+          description: Environment variables updated successfully
+
+  /api/v1/docker/{id}/logs:
+    get:
+      tags:
+        - Docker Service
+      summary: Get Docker service logs
+      description: Get logs from the Docker container
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: lines
+          in: query
+          schema:
+            type: integer
+            default: 100
+      responses:
+        '200':
+          description: Docker service logs
+
+  # Stack Endpoints (if implemented)
+  /api/v1/stack:
+    post:
+      tags:
+        - Stack
+      summary: Create stack
+      description: Create a new multi-service stack from a template
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateStackRequest'
+      responses:
+        '200':
+          description: Stack created successfully
+
+  /api/v1/stack/{id}:
+    get:
+      tags:
+        - Stack
+      summary: Get stack information
+      description: Get detailed information about a stack
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Stack information
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/APIResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/StackInfo'
+
+    delete:
+      tags:
+        - Stack
+      summary: Delete stack
+      description: Delete a stack and all its resources
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Stack deleted successfully

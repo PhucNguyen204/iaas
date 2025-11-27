@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/google/uuid"
 	"github.com/PhucNguyen204/vcs-infrastructure-provisioning-service/dto"
 	"github.com/PhucNguyen204/vcs-infrastructure-provisioning-service/entities"
 	"github.com/PhucNguyen204/vcs-infrastructure-provisioning-service/infrastructures/docker"
 	"github.com/PhucNguyen204/vcs-infrastructure-provisioning-service/usecases/repositories"
+	"github.com/google/uuid"
 )
 
 type IDockerServiceService interface {
@@ -223,6 +223,40 @@ func (s *dockerServiceService) GetDockerService(ctx context.Context, serviceID s
 	service, err := s.dockerRepo.FindByID(serviceID)
 	if err != nil {
 		return nil, err
+	}
+
+	// Sync status from Docker container if infrastructure exists
+	if service.InfrastructureID != "" && service.ContainerID != "" {
+		infra, err := s.infraRepo.FindByID(service.InfrastructureID)
+		if err == nil {
+			if containerInfo, err := s.dockerSvc.InspectContainer(ctx, service.ContainerID); err == nil {
+				var newStatus entities.InfrastructureStatus
+				if containerInfo.State.Running {
+					newStatus = entities.StatusRunning
+				} else if containerInfo.State.Dead {
+					newStatus = entities.StatusFailed
+				} else if containerInfo.State.ExitCode != 0 && containerInfo.State.ExitCode != -1 {
+					newStatus = entities.StatusFailed
+				} else {
+					newStatus = entities.StatusStopped
+				}
+				if infra.Status != newStatus {
+					infra.Status = newStatus
+					s.infraRepo.Update(infra)
+					// Also update service status
+					service.Status = string(newStatus)
+					s.dockerRepo.Update(service)
+				}
+			} else {
+				// Container not found, mark as stopped
+				if infra.Status != entities.StatusStopped && infra.Status != entities.StatusDeleted {
+					infra.Status = entities.StatusStopped
+					s.infraRepo.Update(infra)
+					service.Status = "stopped"
+					s.dockerRepo.Update(service)
+				}
+			}
+		}
 	}
 
 	envVars := []dto.EnvVarInfo{}

@@ -5,9 +5,9 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/segmentio/kafka-go"
 	"github.com/PhucNguyen204/vcs-infrastructure-provisioning-service/pkg/env"
 	"github.com/PhucNguyen204/vcs-infrastructure-provisioning-service/pkg/logger"
+	"github.com/segmentio/kafka-go"
 	"go.uber.org/zap"
 )
 
@@ -34,9 +34,16 @@ func NewKafkaProducer(env env.KafkaEnv, logger logger.ILogger) IKafkaProducer {
 	writer := &kafka.Writer{
 		Addr:                   kafka.TCP(env.Brokers...),
 		Topic:                  env.Topic,
-		Balancer:               &kafka.LeastBytes{},
+		Balancer:               &kafka.Hash{},
 		AllowAutoTopicCreation: true,
-		Async:                  false,
+		Async:                  true,
+		BatchSize:              100,
+		BatchTimeout:           10 * time.Millisecond,
+		RequiredAcks:           1,
+		MaxAttempts:            3,
+		WriteBackoffMin:        100 * time.Millisecond,
+		WriteBackoffMax:        1 * time.Second,
+		Compression:            kafka.Snappy,
 	}
 
 	return &kafkaProducer{
@@ -75,4 +82,3 @@ func (kp *kafkaProducer) PublishEvent(ctx context.Context, event InfrastructureE
 func (kp *kafkaProducer) Close() error {
 	return kp.writer.Close()
 }
-

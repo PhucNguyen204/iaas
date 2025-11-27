@@ -10,13 +10,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/PhucNguyen204/vcs-infrastructure-provisioning-service/dto"
 	"github.com/PhucNguyen204/vcs-infrastructure-provisioning-service/entities"
 	"github.com/PhucNguyen204/vcs-infrastructure-provisioning-service/infrastructures/docker"
 	"github.com/PhucNguyen204/vcs-infrastructure-provisioning-service/infrastructures/kafka"
 	"github.com/PhucNguyen204/vcs-infrastructure-provisioning-service/pkg/logger"
 	"github.com/PhucNguyen204/vcs-infrastructure-provisioning-service/usecases/repositories"
+	"github.com/google/uuid"
 	"go.uber.org/zap"
 )
 
@@ -360,6 +360,32 @@ func (s *postgreSQLService) GetPostgreSQLInfo(ctx context.Context, id string) (*
 	if err != nil {
 		s.logger.Error("failed to find postgres instance", zap.Error(err))
 		return nil, err
+	}
+
+	// Sync status from Docker container
+	if instance.ContainerID != "" {
+		if containerInfo, err := s.dockerSvc.InspectContainer(ctx, instance.ContainerID); err == nil {
+			var newStatus entities.InfrastructureStatus
+			if containerInfo.State.Running {
+				newStatus = entities.StatusRunning
+			} else if containerInfo.State.Dead {
+				newStatus = entities.StatusFailed
+			} else if containerInfo.State.ExitCode != 0 && containerInfo.State.ExitCode != -1 {
+				newStatus = entities.StatusFailed
+			} else {
+				newStatus = entities.StatusStopped
+			}
+			if infra.Status != newStatus {
+				infra.Status = newStatus
+				s.infraRepo.Update(infra)
+			}
+		} else {
+			// Container not found, mark as stopped
+			if infra.Status != entities.StatusStopped && infra.Status != entities.StatusDeleted {
+				infra.Status = entities.StatusStopped
+				s.infraRepo.Update(infra)
+			}
+		}
 	}
 
 	return &dto.PostgreSQLInfoResponse{

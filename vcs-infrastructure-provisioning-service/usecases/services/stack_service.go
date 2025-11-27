@@ -6,10 +6,10 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/PhucNguyen204/vcs-infrastructure-provisioning-service/dto"
 	"github.com/PhucNguyen204/vcs-infrastructure-provisioning-service/entities"
 	"github.com/PhucNguyen204/vcs-infrastructure-provisioning-service/usecases/repositories"
+	"github.com/google/uuid"
 )
 
 type IStackService interface {
@@ -37,6 +37,7 @@ type stackService struct {
 	nginxService   INginxService
 	pgService      IPostgreSQLService
 	clusterService IPostgreSQLClusterService
+	clusterRepo    repositories.IPostgreSQLClusterRepository
 	pgDbService    IPostgresDatabaseService
 	dockerService  IDockerServiceService
 }
@@ -47,6 +48,7 @@ func NewStackService(
 	nginxService INginxService,
 	pgService IPostgreSQLService,
 	clusterService IPostgreSQLClusterService,
+	clusterRepo repositories.IPostgreSQLClusterRepository,
 	pgDbService IPostgresDatabaseService,
 	dockerService IDockerServiceService,
 ) IStackService {
@@ -56,6 +58,7 @@ func NewStackService(
 		nginxService:   nginxService,
 		pgService:      pgService,
 		clusterService: clusterService,
+		clusterRepo:    clusterRepo,
 		pgDbService:    pgDbService,
 		dockerService:  dockerService,
 	}
@@ -226,11 +229,35 @@ func (s *stackService) createResource(ctx context.Context, userID, stackID strin
 			return "", err
 		}
 		clusterReq.ClusterName = resInput.Name
+
+		// Set defaults if not specified
+		if clusterReq.NodeCount == 0 {
+			clusterReq.NodeCount = 2
+		}
+		if clusterReq.PostgreSQLPassword == "" {
+			clusterReq.PostgreSQLPassword = "postgres123"
+		}
+		if clusterReq.PostgreSQLVersion == "" {
+			clusterReq.PostgreSQLVersion = "17"
+		}
+		if clusterReq.ReplicationMode == "" {
+			clusterReq.ReplicationMode = "async"
+		}
+		if clusterReq.Namespace == "" {
+			clusterReq.Namespace = "default"
+		}
+		if clusterReq.CPUPerNode == 0 {
+			clusterReq.CPUPerNode = 1
+		}
+		if clusterReq.MemoryPerNode == 0 {
+			clusterReq.MemoryPerNode = 512
+		}
+
 		resp, err := s.clusterService.CreateCluster(ctx, userID, clusterReq)
 		if err != nil {
 			return "", err
 		}
-		return resp.ClusterID, nil
+		return resp.InfrastructureID, nil
 
 	case "DOCKER_SERVICE":
 		var dockerReq dto.CreateDockerServiceRequest
@@ -342,10 +369,33 @@ func (s *stackService) getResourceOutputs(ctx context.Context, resourceType, inf
 			outputs["port"] = pg.Port
 		}
 	case "POSTGRES_CLUSTER":
-		if cluster, err := s.clusterService.GetClusterInfo(ctx, infraID); err == nil {
-			outputs["cluster_name"] = cluster.ClusterName
-			outputs["haproxy_port"] = cluster.HAProxyPort
-			outputs["status"] = cluster.Status
+		// Get cluster by infrastructure_id first, then get cluster info by cluster_id
+		if clusterEntity, err := s.clusterRepo.FindByInfrastructureID(infraID); err == nil {
+			if cluster, err := s.clusterService.GetClusterInfo(ctx, clusterEntity.ID); err == nil {
+				outputs["cluster_id"] = clusterEntity.ID
+				outputs["cluster_name"] = cluster.ClusterName
+				outputs["node_count"] = len(cluster.Nodes)
+				outputs["write_endpoint"] = fmt.Sprintf("%s:%d", cluster.WriteEndpoint.Host, cluster.WriteEndpoint.Port)
+				outputs["replication_mode"] = cluster.ReplicationMode
+				outputs["status"] = cluster.Status
+				// Add node summary
+				primaryCount := 0
+				replicaCount := 0
+				healthyCount := 0
+				for _, node := range cluster.Nodes {
+					if node.Role == "primary" {
+						primaryCount++
+					} else if node.Role == "replica" {
+						replicaCount++
+					}
+					if node.IsHealthy {
+						healthyCount++
+					}
+				}
+				outputs["primary_nodes"] = primaryCount
+				outputs["replica_nodes"] = replicaCount
+				outputs["healthy_nodes"] = healthyCount
+			}
 		}
 	case "DOCKER_SERVICE":
 		if docker, err := s.dockerService.GetDockerService(ctx, infraID); err == nil {
@@ -431,19 +481,27 @@ func (s *stackService) DeleteStack(ctx context.Context, stackID string) error {
 		return err
 	}
 
+	// Mark stack as deleting
 	stack.Status = entities.StackStatusDeleting
 	s.stackRepo.Update(stack)
 
-	// Delete resources in reverse order
+	// Delete all infrastructure resources in reverse order
 	resources, _ := s.stackRepo.FindResourcesByStackID(stackID)
 
 	for i := len(resources) - 1; i >= 0; i-- {
 		res := resources[i]
-		s.deleteResource(ctx, res.ResourceType, res.InfrastructureID)
+		if err := s.deleteResource(ctx, res.ResourceType, res.InfrastructureID); err != nil {
+			// Log error but continue deleting other resources
+			fmt.Printf("Failed to delete resource %s (%s): %v\n", res.ResourceType, res.InfrastructureID, err)
+		}
 	}
 
+	// Delete stack_resources records
 	s.stackRepo.DeleteResourcesByStackID(stackID)
-	s.stackRepo.Delete(stackID)
+
+	// Mark stack as deleted (don't actually delete the record)
+	stack.Status = entities.StackStatusDeleted
+	s.stackRepo.Update(stack)
 
 	return nil
 }

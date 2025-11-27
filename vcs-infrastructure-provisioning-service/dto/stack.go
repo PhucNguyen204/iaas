@@ -2,7 +2,6 @@ package dto
 
 import "time"
 
-// CreateStackRequest creates a new stack with resources
 type CreateStackRequest struct {
 	Name         string                     `json:"name" binding:"required"`
 	Description  string                     `json:"description"`
@@ -14,17 +13,15 @@ type CreateStackRequest struct {
 	FromTemplate string                     `json:"from_template"` // Optional template ID
 }
 
-// CreateStackResourceInput specifies a resource to create within the stack
 type CreateStackResourceInput struct {
-	Type      string                 `json:"type" binding:"required"` // NGINX_GATEWAY, POSTGRES_INSTANCE, POSTGRES_DATABASE, POSTGRES_CLUSTER, DOCKER_SERVICE
-	Role      string                 `json:"role"`                    // gateway, database, app, cache
-	Name      string                 `json:"name" binding:"required"`
+	Type      string                 `json:"resource_type" binding:"required"` // NGINX_GATEWAY, POSTGRES_INSTANCE, POSTGRES_DATABASE, POSTGRES_CLUSTER, DOCKER_SERVICE
+	Role      string                 `json:"role"`                             // gateway, database, app, cache
+	Name      string                 `json:"resource_name" binding:"required"`
 	Spec      map[string]interface{} `json:"spec" binding:"required"` // Resource-specific config
 	DependsOn []string               `json:"depends_on"`              // Array of resource names in this stack
 	Order     int                    `json:"order"`                   // Creation order
 }
 
-// UpdateStackRequest updates stack metadata or resources
 type UpdateStackRequest struct {
 	Name            string                     `json:"name"`
 	Description     string                     `json:"description"`
@@ -34,14 +31,12 @@ type UpdateStackRequest struct {
 	UpdateResources []UpdateStackResourceInput `json:"update_resources"` // Update existing resources
 }
 
-// UpdateStackResourceInput updates a resource within the stack
 type UpdateStackResourceInput struct {
 	InfrastructureID string                 `json:"infrastructure_id" binding:"required"`
 	Role             string                 `json:"role"`
 	Spec             map[string]interface{} `json:"spec"`
 }
 
-// CloneStackRequest clones an existing stack
 type CloneStackRequest struct {
 	SourceStackID string   `json:"source_stack_id" binding:"required"`
 	Name          string   `json:"name" binding:"required"`
@@ -49,7 +44,6 @@ type CloneStackRequest struct {
 	Tags          []string `json:"tags"`
 }
 
-// StackInfo represents complete stack information
 type StackInfo struct {
 	ID          string              `json:"id"`
 	Name        string              `json:"name"`
@@ -65,7 +59,6 @@ type StackInfo struct {
 	UpdatedAt   time.Time           `json:"updated_at"`
 }
 
-// StackResourceInfo represents a resource within a stack
 type StackResourceInfo struct {
 	ID               string                 `json:"id"`
 	StackID          string                 `json:"stack_id"`
@@ -80,7 +73,6 @@ type StackResourceInfo struct {
 	CreatedAt        time.Time              `json:"created_at"`
 }
 
-// StackListResponse lists stacks with pagination
 type StackListResponse struct {
 	Stacks     []StackSummary `json:"stacks"`
 	TotalCount int            `json:"total_count"`
@@ -88,7 +80,6 @@ type StackListResponse struct {
 	PageSize   int            `json:"page_size"`
 }
 
-// StackSummary represents a summary of a stack
 type StackSummary struct {
 	ID            string    `json:"id"`
 	Name          string    `json:"name"`

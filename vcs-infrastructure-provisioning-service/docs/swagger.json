@@ -1,0 +1,2184 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "description": "Infrastructure Provisioning Service API for managing PostgreSQL clusters, Nginx instances, Docker services, and stacks",
+        "title": "VCS Infrastructure Provisioning Service API",
+        "contact": {},
+        "version": "1.0"
+    },
+    "host": "localhost:8083",
+    "basePath": "/",
+    "paths": {
+        "/health": {
+            "get": {
+                "description": "Check if the service is running",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "health"
+                ],
+                "summary": "Health check",
+                "responses": {
+                    "200": {
+                        "description": "Service is healthy",
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "status": {
+                                    "type": "string",
+                                    "example": "ok"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/postgres/cluster": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Create a new PostgreSQL cluster with specified number of nodes and WAL streaming replication",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "postgres-cluster"
+                ],
+                "summary": "Create PostgreSQL cluster",
+                "parameters": [
+                    {
+                        "description": "Cluster creation request",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.CreateClusterRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Cluster created successfully",
+                        "schema": {
+                            "$ref": "#/definitions/dto.APIResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request",
+                        "schema": {
+                            "$ref": "#/definitions/dto.APIResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/dto.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/postgres/cluster/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get detailed information about a PostgreSQL cluster including nodes and endpoints",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "postgres-cluster"
+                ],
+                "summary": "Get cluster information",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Cluster ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Cluster information",
+                        "schema": {
+                            "$ref": "#/definitions/dto.APIResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Cluster not found",
+                        "schema": {
+                            "$ref": "#/definitions/dto.APIResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Delete a PostgreSQL cluster and all its nodes",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "postgres-cluster"
+                ],
+                "summary": "Delete cluster",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Cluster ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Cluster deleted successfully",
+                        "schema": {
+                            "$ref": "#/definitions/dto.APIResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Cluster not found",
+                        "schema": {
+                            "$ref": "#/definitions/dto.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/postgres/cluster/{id}/start": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Start all nodes in the cluster",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "postgres-cluster"
+                ],
+                "summary": "Start cluster",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Cluster ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Cluster started successfully",
+                        "schema": {
+                            "$ref": "#/definitions/dto.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/postgres/cluster/{id}/stop": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Stop all nodes in the cluster",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "postgres-cluster"
+                ],
+                "summary": "Stop cluster",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Cluster ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Cluster stopped successfully",
+                        "schema": {
+                            "$ref": "#/definitions/dto.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/postgres/cluster/{id}/restart": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Restart all nodes in the cluster",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "postgres-cluster"
+                ],
+                "summary": "Restart cluster",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Cluster ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Cluster restarted successfully",
+                        "schema": {
+                            "$ref": "#/definitions/dto.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/postgres/cluster/{id}/scale": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Scale the cluster by adding or removing replica nodes",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "postgres-cluster"
+                ],
+                "summary": "Scale cluster",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Cluster ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Scale request",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.ScaleClusterRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Cluster scaled successfully",
+                        "schema": {
+                            "$ref": "#/definitions/dto.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/postgres/cluster/{id}/failover": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Manually promote a replica node to become the new primary (failover)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "postgres-cluster"
+                ],
+                "summary": "Promote replica to primary",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Cluster ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Failover request",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.PromoteReplicaRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Failover completed successfully",
+                        "schema": {
+                            "$ref": "#/definitions/dto.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/postgres/cluster/{id}/replication": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get the current replication status of all nodes",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "postgres-cluster"
+                ],
+                "summary": "Get replication status",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Cluster ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Replication status",
+                        "schema": {
+                            "$ref": "#/definitions/dto.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/postgres/cluster/{id}/stats": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get performance statistics for the cluster",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "postgres-cluster"
+                ],
+                "summary": "Get cluster statistics",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Cluster ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Cluster statistics",
+                        "schema": {
+                            "$ref": "#/definitions/dto.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/postgres/cluster/{id}/logs": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get logs from all nodes in the cluster",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "postgres-cluster"
+                ],
+                "summary": "Get cluster logs",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Cluster ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "default": 100,
+                        "description": "Number of lines",
+                        "name": "lines",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Cluster logs",
+                        "schema": {
+                            "$ref": "#/definitions/dto.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/postgres/cluster/{id}/endpoints": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get connection endpoints for write (primary) and read (replicas)",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "postgres-cluster"
+                ],
+                "summary": "Get connection endpoints",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Cluster ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Connection endpoints",
+                        "schema": {
+                            "$ref": "#/definitions/dto.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/postgres/cluster/{id}/config": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Update cluster configuration such as replication mode",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "postgres-cluster"
+                ],
+                "summary": "Update cluster configuration",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Cluster ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Configuration update request",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.UpdateClusterConfigRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Configuration updated successfully",
+                        "schema": {
+                            "$ref": "#/definitions/dto.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/postgres/cluster/{id}/users": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "List all users in the PostgreSQL cluster",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "postgres-cluster"
+                ],
+                "summary": "List users",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Cluster ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "List of users",
+                        "schema": {
+                            "$ref": "#/definitions/dto.APIResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Create a new user in the PostgreSQL cluster",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "postgres-cluster"
+                ],
+                "summary": "Create database user",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Cluster ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "User creation request",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.CreateUserRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "User created successfully",
+                        "schema": {
+                            "$ref": "#/definitions/dto.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/postgres/cluster/{id}/users/{username}": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Delete a user from the PostgreSQL cluster",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "postgres-cluster"
+                ],
+                "summary": "Delete user",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Cluster ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Username",
+                        "name": "username",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "User deleted successfully",
+                        "schema": {
+                            "$ref": "#/definitions/dto.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/postgres/cluster/{id}/databases": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "List all databases in the PostgreSQL cluster",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "postgres-cluster"
+                ],
+                "summary": "List databases",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Cluster ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "List of databases",
+                        "schema": {
+                            "$ref": "#/definitions/dto.APIResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Create a new database in the PostgreSQL cluster",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "postgres-cluster"
+                ],
+                "summary": "Create database",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Cluster ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Database creation request",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.CreateDatabaseRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Database created successfully",
+                        "schema": {
+                            "$ref": "#/definitions/dto.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/postgres/cluster/{id}/databases/{dbname}": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Delete a database from the PostgreSQL cluster",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "postgres-cluster"
+                ],
+                "summary": "Delete database",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Cluster ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Database name",
+                        "name": "dbname",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Database deleted successfully",
+                        "schema": {
+                            "$ref": "#/definitions/dto.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/nginx": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Create a new Nginx load balancer instance",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "nginx"
+                ],
+                "summary": "Create Nginx instance",
+                "parameters": [
+                    {
+                        "description": "Nginx creation request",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.CreateNginxRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Nginx instance created successfully",
+                        "schema": {
+                            "$ref": "#/definitions/dto.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/nginx/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get detailed information about an Nginx instance",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "nginx"
+                ],
+                "summary": "Get Nginx information",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Nginx ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Nginx information",
+                        "schema": {
+                            "$ref": "#/definitions/dto.APIResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Delete an Nginx instance",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "nginx"
+                ],
+                "summary": "Delete Nginx instance",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Nginx ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Nginx instance deleted successfully",
+                        "schema": {
+                            "$ref": "#/definitions/dto.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/nginx/{id}/start": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Start the Nginx service",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "nginx"
+                ],
+                "summary": "Start Nginx",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Nginx ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Nginx started successfully",
+                        "schema": {
+                            "$ref": "#/definitions/dto.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/nginx/{id}/stop": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Stop the Nginx service",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "nginx"
+                ],
+                "summary": "Stop Nginx",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Nginx ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Nginx stopped successfully",
+                        "schema": {
+                            "$ref": "#/definitions/dto.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/nginx/{id}/restart": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Restart the Nginx service",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "nginx"
+                ],
+                "summary": "Restart Nginx",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Nginx ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Nginx restarted successfully",
+                        "schema": {
+                            "$ref": "#/definitions/dto.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/nginx/{id}/domains": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Add a domain to the Nginx configuration",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "nginx"
+                ],
+                "summary": "Add domain",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Nginx ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Domain request",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.AddDomainRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Domain added successfully",
+                        "schema": {
+                            "$ref": "#/definitions/dto.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/nginx/{id}/domains/{domain}": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Remove a domain from the Nginx configuration",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "nginx"
+                ],
+                "summary": "Delete domain",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Nginx ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Domain name",
+                        "name": "domain",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Domain deleted successfully",
+                        "schema": {
+                            "$ref": "#/definitions/dto.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/nginx/{id}/routes": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Add a routing rule to the Nginx configuration",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "nginx"
+                ],
+                "summary": "Add route",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Nginx ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Route request",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.AddRouteRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Route added successfully",
+                        "schema": {
+                            "$ref": "#/definitions/dto.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/nginx/{id}/routes/{route_id}": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Update an existing routing rule",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "nginx"
+                ],
+                "summary": "Update route",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Nginx ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Route ID",
+                        "name": "route_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Route update request",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.AddRouteRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Route updated successfully",
+                        "schema": {
+                            "$ref": "#/definitions/dto.APIResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Remove a routing rule",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "nginx"
+                ],
+                "summary": "Delete route",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Nginx ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Route ID",
+                        "name": "route_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Route deleted successfully",
+                        "schema": {
+                            "$ref": "#/definitions/dto.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/nginx/{id}/upstreams": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get the current upstream configuration",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "nginx"
+                ],
+                "summary": "Get upstreams",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Nginx ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Upstream configuration",
+                        "schema": {
+                            "$ref": "#/definitions/dto.APIResponse"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Update the upstream server configuration",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "nginx"
+                ],
+                "summary": "Update upstreams",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Nginx ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Upstreams request",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.UpdateUpstreamsRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Upstreams updated successfully",
+                        "schema": {
+                            "$ref": "#/definitions/dto.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/nginx/{id}/security": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get the current security policy configuration",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "nginx"
+                ],
+                "summary": "Get security policy",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Nginx ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Security policy",
+                        "schema": {
+                            "$ref": "#/definitions/dto.APIResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Configure security policies like rate limiting",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "nginx"
+                ],
+                "summary": "Set security policy",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Nginx ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Security policy request",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.SetSecurityPolicyRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Security policy set successfully",
+                        "schema": {
+                            "$ref": "#/definitions/dto.APIResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Remove security policy configuration",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "nginx"
+                ],
+                "summary": "Delete security policy",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Nginx ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Security policy deleted successfully",
+                        "schema": {
+                            "$ref": "#/definitions/dto.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/nginx/{id}/logs": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get access and error logs from Nginx",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "nginx"
+                ],
+                "summary": "Get Nginx logs",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Nginx ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "default": 100,
+                        "description": "Number of lines",
+                        "name": "lines",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Nginx logs",
+                        "schema": {
+                            "$ref": "#/definitions/dto.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/nginx/{id}/metrics": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get performance metrics from Nginx",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "nginx"
+                ],
+                "summary": "Get Nginx metrics",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Nginx ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Nginx metrics",
+                        "schema": {
+                            "$ref": "#/definitions/dto.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/docker": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Create a new Docker container service",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "docker"
+                ],
+                "summary": "Create Docker service",
+                "parameters": [
+                    {
+                        "description": "Docker service creation request",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.CreateDockerServiceRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Docker service created successfully",
+                        "schema": {
+                            "$ref": "#/definitions/dto.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/docker/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get detailed information about a Docker service",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "docker"
+                ],
+                "summary": "Get Docker service information",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Docker service ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Docker service information",
+                        "schema": {
+                            "$ref": "#/definitions/dto.APIResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Delete a Docker service and its container",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "docker"
+                ],
+                "summary": "Delete Docker service",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Docker service ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Docker service deleted successfully",
+                        "schema": {
+                            "$ref": "#/definitions/dto.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/docker/{id}/start": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Start the Docker container",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "docker"
+                ],
+                "summary": "Start Docker service",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Docker service ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Docker service started successfully",
+                        "schema": {
+                            "$ref": "#/definitions/dto.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/docker/{id}/stop": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Stop the Docker container",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "docker"
+                ],
+                "summary": "Stop Docker service",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Docker service ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Docker service stopped successfully",
+                        "schema": {
+                            "$ref": "#/definitions/dto.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/docker/{id}/restart": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Restart the Docker container",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "docker"
+                ],
+                "summary": "Restart Docker service",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Docker service ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Docker service restarted successfully",
+                        "schema": {
+                            "$ref": "#/definitions/dto.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/docker/{id}/env": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Update environment variables for the Docker service",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "docker"
+                ],
+                "summary": "Update environment variables",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Docker service ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Environment variables update request",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.UpdateEnvVarsRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Environment variables updated successfully",
+                        "schema": {
+                            "$ref": "#/definitions/dto.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/docker/{id}/logs": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get logs from the Docker container",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "docker"
+                ],
+                "summary": "Get Docker service logs",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Docker service ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "default": 100,
+                        "description": "Number of lines",
+                        "name": "lines",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Docker service logs",
+                        "schema": {
+                            "$ref": "#/definitions/dto.APIResponse"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "dto.APIResponse": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string"
+                },
+                "data": {},
+                "error": {
+                    "type": "string"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "dto.CreateClusterRequest": {
+            "type": "object",
+            "required": [
+                "cluster_name",
+                "cpu_per_node",
+                "memory_per_node",
+                "node_count",
+                "postgres_password",
+                "postgres_version",
+                "storage_per_node"
+            ],
+            "properties": {
+                "cluster_name": {
+                    "type": "string",
+                    "example": "prod-cluster"
+                },
+                "cpu_per_node": {
+                    "type": "integer",
+                    "example": 512
+                },
+                "memory_per_node": {
+                    "type": "integer",
+                    "example": 536870912
+                },
+                "node_count": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "example": 3
+                },
+                "postgres_password": {
+                    "type": "string",
+                    "example": "securepass123"
+                },
+                "postgres_version": {
+                    "type": "string",
+                    "example": "15"
+                },
+                "replication_mode": {
+                    "type": "string",
+                    "enum": [
+                        "async",
+                        "sync"
+                    ],
+                    "example": "async"
+                },
+                "storage_per_node": {
+                    "type": "integer",
+                    "example": 10737418240
+                }
+            }
+        },
+        "dto.ScaleClusterRequest": {
+            "type": "object",
+            "required": [
+                "node_count"
+            ],
+            "properties": {
+                "node_count": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "example": 5
+                }
+            }
+        },
+        "dto.PromoteReplicaRequest": {
+            "type": "object",
+            "required": [
+                "new_primary_node_id"
+            ],
+            "properties": {
+                "new_primary_node_id": {
+                    "type": "string",
+                    "example": "uuid-string"
+                }
+            }
+        },
+        "dto.UpdateClusterConfigRequest": {
+            "type": "object",
+            "properties": {
+                "replication_mode": {
+                    "type": "string",
+                    "enum": [
+                        "async",
+                        "sync"
+                    ],
+                    "example": "sync"
+                }
+            }
+        },
+        "dto.CreateUserRequest": {
+            "type": "object",
+            "required": [
+                "password",
+                "username"
+            ],
+            "properties": {
+                "password": {
+                    "type": "string",
+                    "example": "userpass123"
+                },
+                "roles": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "LOGIN",
+                        "CREATEDB"
+                    ]
+                },
+                "username": {
+                    "type": "string",
+                    "example": "appuser"
+                }
+            }
+        },
+        "dto.CreateDatabaseRequest": {
+            "type": "object",
+            "required": [
+                "name"
+            ],
+            "properties": {
+                "encoding": {
+                    "type": "string",
+                    "example": "UTF8"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "appdb"
+                },
+                "owner": {
+                    "type": "string",
+                    "example": "postgres"
+                }
+            }
+        },
+        "dto.CreateNginxRequest": {
+            "type": "object",
+            "required": [
+                "nginx_name",
+                "nginx_version"
+            ],
+            "properties": {
+                "config": {
+                    "type": "object",
+                    "properties": {
+                        "worker_connections": {
+                            "type": "integer",
+                            "example": 1024
+                        },
+                        "worker_processes": {
+                            "type": "string",
+                            "example": "auto"
+                        }
+                    }
+                },
+                "cpu": {
+                    "type": "integer",
+                    "example": 256
+                },
+                "memory": {
+                    "type": "integer",
+                    "example": 268435456
+                },
+                "nginx_name": {
+                    "type": "string",
+                    "example": "lb-production"
+                },
+                "nginx_version": {
+                    "type": "string",
+                    "example": "1.25-alpine"
+                },
+                "port": {
+                    "type": "integer",
+                    "example": 0
+                }
+            }
+        },
+        "dto.AddDomainRequest": {
+            "type": "object",
+            "required": [
+                "domain"
+            ],
+            "properties": {
+                "domain": {
+                    "type": "string",
+                    "example": "api.example.com"
+                },
+                "ssl_enabled": {
+                    "type": "boolean",
+                    "example": false
+                }
+            }
+        },
+        "dto.AddRouteRequest": {
+            "type": "object",
+            "required": [
+                "domain",
+                "path",
+                "upstream"
+            ],
+            "properties": {
+                "domain": {
+                    "type": "string",
+                    "example": "api.example.com"
+                },
+                "methods": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "GET",
+                        "POST"
+                    ]
+                },
+                "path": {
+                    "type": "string",
+                    "example": "/api"
+                },
+                "upstream": {
+                    "type": "string",
+                    "example": "http://backend:8080"
+                }
+            }
+        },
+        "dto.UpdateUpstreamsRequest": {
+            "type": "object",
+            "required": [
+                "upstreams"
+            ],
+            "properties": {
+                "upstreams": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "load_balance_method": {
+                                "type": "string",
+                                "enum": [
+                                    "round_robin",
+                                    "least_conn",
+                                    "ip_hash"
+                                ]
+                            },
+                            "name": {
+                                "type": "string"
+                            },
+                            "servers": {
+                                "type": "array",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "address": {
+                                            "type": "string"
+                                        },
+                                        "weight": {
+                                            "type": "integer"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "dto.SetSecurityPolicyRequest": {
+            "type": "object",
+            "properties": {
+                "ip_whitelist": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "rate_limit": {
+                    "type": "object",
+                    "properties": {
+                        "enabled": {
+                            "type": "boolean"
+                        },
+                        "requests_per_second": {
+                            "type": "integer"
+                        }
+                    }
+                }
+            }
+        },
+        "dto.CreateDockerServiceRequest": {
+            "type": "object",
+            "required": [
+                "image_name",
+                "image_tag",
+                "service_name"
+            ],
+            "properties": {
+                "cpu": {
+                    "type": "integer",
+                    "example": 256
+                },
+                "environment": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
+                },
+                "health_check": {
+                    "type": "object",
+                    "properties": {
+                        "interval": {
+                            "type": "string"
+                        },
+                        "retries": {
+                            "type": "integer"
+                        },
+                        "test": {
+                            "type": "string"
+                        },
+                        "timeout": {
+                            "type": "string"
+                        }
+                    }
+                },
+                "image_name": {
+                    "type": "string",
+                    "example": "redis"
+                },
+                "image_tag": {
+                    "type": "string",
+                    "example": "7-alpine"
+                },
+                "memory": {
+                    "type": "integer",
+                    "example": 268435456
+                },
+                "networks": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "ports": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "container_port": {
+                                "type": "integer"
+                            },
+                            "host_port": {
+                                "type": "integer"
+                            },
+                            "protocol": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                },
+                "service_name": {
+                    "type": "string",
+                    "example": "redis-cache"
+                }
+            }
+        },
+        "dto.UpdateEnvVarsRequest": {
+            "type": "object",
+            "required": [
+                "environment"
+            ],
+            "properties": {
+                "environment": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
+                }
+            }
+        }
+    },
+    "securityDefinitions": {
+        "BearerAuth": {
+            "type": "apiKey",
+            "name": "Authorization",
+            "in": "header"
+        }
+    }
+}

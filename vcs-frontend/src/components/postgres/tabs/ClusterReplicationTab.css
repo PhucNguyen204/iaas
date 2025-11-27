@@ -1,0 +1,426 @@
+.cluster-replication-tab {
+  max-width: 1600px;
+}
+
+.replication-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+
+.replication-header h2 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.auto-refresh-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.auto-refresh-toggle input {
+  cursor: pointer;
+}
+
+.replication-info {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 32px;
+}
+
+.info-card {
+  background: white;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 16px;
+}
+
+.info-label {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+
+.info-value {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.mode-badge {
+  padding: 6px 12px;
+  border-radius: 16px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.mode-badge.sync {
+  background: rgba(34, 197, 94, 0.1);
+  color: var(--success-color);
+}
+
+.mode-badge.async {
+  background: rgba(59, 130, 246, 0.1);
+  color: var(--primary-color);
+}
+
+.topology-diagram {
+  background: white;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 24px;
+}
+
+.topology-diagram h3 {
+  margin: 0 0 24px 0;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.topology-visual {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 32px;
+}
+
+.primary-node-container, .replica-nodes-container {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.node-box {
+  background: white;
+  border: 3px solid;
+  border-radius: 16px;
+  padding: 20px;
+  min-width: 280px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transition: all 0.3s;
+  position: relative;
+}
+
+.node-box.primary-node {
+  border-color: var(--success-color);
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.05), white);
+}
+
+.node-box.replica-node {
+  border-color: var(--primary-color);
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.05), white);
+}
+
+.node-box.replica-node.warning {
+  border-color: var(--warning-color);
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.05), white);
+}
+
+.node-box.replica-node.critical {
+  border-color: var(--error-color);
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.05), white);
+}
+
+.node-icon-wrapper {
+  color: var(--primary-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 60px;
+  height: 60px;
+  background: var(--bg-secondary);
+  border-radius: 12px;
+  margin: 0 auto;
+}
+
+.node-box.primary-node .node-icon-wrapper {
+  background: rgba(34, 197, 94, 0.1);
+  color: var(--success-color);
+}
+
+.node-info {
+  text-align: center;
+}
+
+.node-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.node-name {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+
+.node-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.node-badge.primary {
+  background: var(--success-color);
+  color: white;
+}
+
+.node-badge.replica {
+  background: var(--primary-color);
+  color: white;
+}
+
+.node-status {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+}
+
+.node-status.healthy {
+  color: var(--success-color);
+}
+
+.node-status.warning {
+  color: var(--warning-color);
+}
+
+.node-status.critical {
+  color: var(--error-color);
+}
+
+.replication-details {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-color);
+}
+
+.detail-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.sync-badge {
+  padding: 3px 8px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.sync-badge.sync {
+  background: rgba(34, 197, 94, 0.1);
+  color: var(--success-color);
+}
+
+.sync-badge.async {
+  background: rgba(59, 130, 246, 0.1);
+  color: var(--primary-color);
+}
+
+.replication-lines {
+  display: flex;
+  gap: 20px;
+}
+
+.replication-line {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.line-arrow {
+  font-size: 32px;
+  font-weight: bold;
+  color: var(--success-color);
+}
+
+.replication-line.warning .line-arrow {
+  color: var(--warning-color);
+}
+
+.replication-line.critical .line-arrow {
+  color: var(--error-color);
+}
+
+.line-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.no-replicas {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 40px;
+  color: var(--text-muted);
+}
+
+.replication-table {
+  background: white;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 24px;
+}
+
+.replication-table h3 {
+  margin: 0 0 16px 0;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.replication-table table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.replication-table th {
+  text-align: left;
+  padding: 12px;
+  background: var(--bg-secondary);
+  font-weight: 600;
+  color: var(--text-primary);
+  border-bottom: 2px solid var(--border-color);
+}
+
+.replication-table td {
+  padding: 12px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.replication-table tr.warning {
+  background: rgba(245, 158, 11, 0.05);
+}
+
+.replication-table tr.critical {
+  background: rgba(239, 68, 68, 0.05);
+}
+
+.node-name-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+}
+
+.state-badge {
+  padding: 4px 10px;
+  background: var(--bg-secondary);
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.lag-cell {
+  font-weight: 600;
+}
+
+.lag-cell.healthy {
+  color: var(--success-color);
+}
+
+.lag-cell.warning {
+  color: var(--warning-color);
+}
+
+.lag-cell.critical {
+  color: var(--error-color);
+}
+
+.health-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.health-badge.healthy {
+  background: rgba(34, 197, 94, 0.1);
+  color: var(--success-color);
+}
+
+.health-badge.unhealthy {
+  background: rgba(239, 68, 68, 0.1);
+  color: var(--error-color);
+}
+
+.legend {
+  background: var(--bg-secondary);
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.legend h4 {
+  margin: 0 0 12px 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.legend-items {
+  display: flex;
+  gap: 24px;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.legend-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+}
+
+.legend-dot.healthy {
+  background: var(--success-color);
+}
+
+.legend-dot.warning {
+  background: var(--warning-color);
+}
+
+.legend-dot.critical {
+  background: var(--error-color);
+}
+
+@media (max-width: 1024px) {
+  .replication-info {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .replica-nodes-container {
+    flex-direction: column;
+    align-items: center;
+  }
+}

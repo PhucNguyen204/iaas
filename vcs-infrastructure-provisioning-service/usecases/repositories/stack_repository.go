@@ -31,6 +31,7 @@ type IStackRepository interface {
 	FindOperationByID(id string) (*entities.StackOperation, error)
 	FindOperationsByStackID(stackID string) ([]entities.StackOperation, error)
 	UpdateOperation(operation *entities.StackOperation) error
+	DeleteOperationsByStackID(stackID string) error
 }
 
 type stackRepository struct {
@@ -85,7 +86,7 @@ func (r *stackRepository) FindResourcesByStackID(stackID string) ([]entities.Sta
 	var resources []entities.StackResource
 	err := r.db.Preload("Infrastructure").
 		Where("stack_id = ?", stackID).
-		Order("`order` ASC").
+		Order(`"order" ASC`).
 		Find(&resources).Error
 	return resources, err
 }
@@ -146,4 +147,8 @@ func (r *stackRepository) FindOperationsByStackID(stackID string) ([]entities.St
 
 func (r *stackRepository) UpdateOperation(operation *entities.StackOperation) error {
 	return r.db.Save(operation).Error
+}
+
+func (r *stackRepository) DeleteOperationsByStackID(stackID string) error {
+	return r.db.Where("stack_id = ?", stackID).Delete(&entities.StackOperation{}).Error
 }

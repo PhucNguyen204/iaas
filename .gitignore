@@ -1,0 +1,56 @@
+# Dependencies
+node_modules/
+vendor/
+
+# Build outputs
+*.exe
+*.dll
+*.so
+*.dylib
+build/
+dist/
+
+# IDE and editor
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.cursor/
+
+# Logs
+*.log
+logs/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Test coverage
+coverage/
+*.cover
+*.out
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Go specific
+*.test
+__debug_bin
+
+# Frontend specific
+vcs-frontend/node_modules/
+vcs-frontend/build/
+
+# Binaries
+provisioning-service
+provisioning-service.exe
+main.exe
+

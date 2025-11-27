@@ -12,12 +12,16 @@ type IPostgreSQLClusterRepository interface {
 	Update(cluster *entities.PostgreSQLCluster) error
 	Delete(id string) error
 	ListNodes(clusterID string) ([]entities.ClusterNode, error)
+	FindNodeByID(nodeID string) (*entities.ClusterNode, error)
 	CreateNode(node *entities.ClusterNode) error
 	UpdateNode(node *entities.ClusterNode) error
 	DeleteNode(id string) error
 	CreateEtcdNode(node *entities.EtcdNode) error
 	ListEtcdNodes(clusterID string) ([]entities.EtcdNode, error)
 	DeleteEtcdNode(id string) error
+	// Failover events
+	CreateFailoverEvent(event *entities.FailoverEvent) error
+	ListFailoverEvents(clusterID string) ([]entities.FailoverEvent, error)
 }
 
 type postgreSQLClusterRepository struct {
@@ -84,3 +88,18 @@ func (r *postgreSQLClusterRepository) DeleteEtcdNode(id string) error {
 	return r.db.Delete(&entities.EtcdNode{}, "id = ?", id).Error
 }
 
+func (r *postgreSQLClusterRepository) FindNodeByID(nodeID string) (*entities.ClusterNode, error) {
+	var node entities.ClusterNode
+	err := r.db.First(&node, "id = ?", nodeID).Error
+	return &node, err
+}
+
+func (r *postgreSQLClusterRepository) CreateFailoverEvent(event *entities.FailoverEvent) error {
+	return r.db.Create(event).Error
+}
+
+func (r *postgreSQLClusterRepository) ListFailoverEvents(clusterID string) ([]entities.FailoverEvent, error) {
+	var events []entities.FailoverEvent
+	err := r.db.Order("occurred_at DESC").Find(&events, "cluster_id = ?", clusterID).Error
+	return events, err
+}

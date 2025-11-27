@@ -1,0 +1,227 @@
+.stack-logs-tab {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-height: 600px;
+}
+
+.logs-header {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.logs-header h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.logs-description {
+  margin: 0;
+  font-size: 13px;
+  color: #6b7280;
+}
+
+/* Layout with sidebar */
+.logs-layout {
+  display: flex;
+  gap: 16px;
+  flex: 1;
+  min-height: 500px;
+}
+
+/* Resource Sidebar */
+.resource-sidebar {
+  width: 220px;
+  flex-shrink: 0;
+  background: #f9fafb;
+  border-radius: 8px;
+  padding: 16px;
+  border: 1px solid #e5e7eb;
+}
+
+.resource-sidebar h4 {
+  margin: 0 0 12px 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: #6b7280;
+  text-transform: uppercase;
+}
+
+.resource-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.resource-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 13px;
+  color: #374151;
+}
+
+.resource-item:hover {
+  background: #e5e7eb;
+}
+
+.resource-item.selected {
+  background: #3b82f6;
+  color: white;
+}
+
+.resource-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.no-resources {
+  color: #9ca3af;
+  font-size: 13px;
+  text-align: center;
+  padding: 20px;
+}
+
+/* Logs Panel */
+.logs-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+.logs-toolbar {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.logs-toolbar .search-box {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 6px 12px;
+}
+
+.logs-toolbar .search-box input {
+  flex: 1;
+  border: none;
+  background: none;
+  outline: none;
+  font-size: 13px;
+}
+
+.logs-toolbar .btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  border: none;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.logs-toolbar .btn-secondary {
+  background: #f3f4f6;
+  color: #374151;
+}
+
+.logs-toolbar .btn-secondary:hover {
+  background: #e5e7eb;
+}
+
+.logs-toolbar .btn-sm {
+  padding: 6px 10px;
+}
+
+/* Logs Container */
+.logs-container {
+  flex: 1;
+  background: #1e1e1e;
+  border-radius: 8px;
+  padding: 16px;
+  overflow-y: auto;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 12px;
+  min-height: 400px;
+  max-height: 600px;
+}
+
+.loading-logs,
+.no-logs,
+.error-logs {
+  text-align: center;
+  padding: 40px 20px;
+  color: #9ca3af;
+}
+
+.error-logs {
+  color: #ef4444;
+}
+
+/* Log Content */
+.log-content {
+  margin: 0;
+  color: #d4d4d4;
+  white-space: pre-wrap;
+  word-break: break-all;
+  line-height: 1.6;
+}
+
+/* Cluster Logs */
+.cluster-logs {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.node-log-section {
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid #374151;
+}
+
+.node-log-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  background: #374151;
+  color: #d4d4d4;
+}
+
+.node-log-header .node-name {
+  font-weight: 600;
+  color: #10b981;
+}
+
+.node-log-header .timestamp {
+  font-size: 11px;
+  color: #9ca3af;
+  margin-left: auto;
+}
+
+.node-log-section .log-content {
+  padding: 12px;
+  background: #1e1e1e;
+  max-height: 250px;
+  overflow-y: auto;
+}

@@ -1,19 +1,23 @@
 package docker
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
 	"strings"
+	"time"
 
+	"github.com/PhucNguyen204/vcs-infrastructure-provisioning-service/pkg/logger"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/events"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/client"
+	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/docker/go-connections/nat"
-	"github.com/PhucNguyen204/vcs-infrastructure-provisioning-service/pkg/logger"
 	"go.uber.org/zap"
 )
 
@@ -31,6 +35,7 @@ type IDockerService interface {
 	RemoveNetwork(ctx context.Context, networkID string) error
 	CreateVolume(ctx context.Context, volumeName string) error
 	RemoveVolume(ctx context.Context, volumeName string) error
+	ListenToEvents(ctx context.Context, eventChan chan<- events.Message) error
 }
 
 type ContainerConfig struct {
@@ -68,14 +73,21 @@ func NewDockerService(logger logger.ILogger) (IDockerService, error) {
 }
 
 func (ds *dockerService) CreateContainer(ctx context.Context, config ContainerConfig) (string, error) {
-	ds.logger.Info("pulling image", zap.String("image", config.Image))
-	reader, err := ds.client.ImagePull(ctx, config.Image, types.ImagePullOptions{})
+	// Check if image exists locally first
+	_, _, err := ds.client.ImageInspectWithRaw(ctx, config.Image)
 	if err != nil {
-		ds.logger.Error("failed to pull image", zap.Error(err))
-		return "", err
+		// Image not found locally, try to pull
+		ds.logger.Info("pulling image", zap.String("image", config.Image))
+		reader, pullErr := ds.client.ImagePull(ctx, config.Image, types.ImagePullOptions{})
+		if pullErr != nil {
+			ds.logger.Error("failed to pull image", zap.Error(pullErr))
+			return "", pullErr
+		}
+		defer reader.Close()
+		io.Copy(io.Discard, reader)
+	} else {
+		ds.logger.Info("using local image", zap.String("image", config.Image))
 	}
-	defer reader.Close()
-	io.Copy(io.Discard, reader)
 
 	portBindings := nat.PortMap{}
 	exposedPorts := nat.PortSet{}
@@ -237,12 +249,19 @@ func (ds *dockerService) ExecCommand(ctx context.Context, containerID string, cm
 	}
 	defer attachResp.Close()
 
-	output, err := io.ReadAll(attachResp.Reader)
+	// Use stdcopy to properly demux the docker stream (removes header bytes)
+	var stdout, stderr bytes.Buffer
+	_, err = stdcopy.StdCopy(&stdout, &stderr, attachResp.Reader)
 	if err != nil {
 		return "", err
 	}
 
-	return string(output), nil
+	output := stdout.String()
+	if stderr.Len() > 0 {
+		output += stderr.String()
+	}
+
+	return output, nil
 }
 
 func (ds *dockerService) InspectContainer(ctx context.Context, containerID string) (*types.ContainerJSON, error) {
@@ -319,5 +338,46 @@ func (ds *dockerService) RemoveVolume(ctx context.Context, volumeName string) er
 		return err
 	}
 	ds.logger.Info("volume removed", zap.String("volume", volumeName))
+	return nil
+}
+
+// ListenToEvents listens to Docker events and sends them to the provided channel
+func (ds *dockerService) ListenToEvents(ctx context.Context, eventChan chan<- events.Message) error {
+	// Filter to only listen to container events
+	filterArgs := filters.NewArgs()
+	filterArgs.Add("type", "container")
+
+	options := types.EventsOptions{
+		Filters: filterArgs,
+	}
+
+	eventStream, errStream := ds.client.Events(ctx, options)
+
+	go func() {
+		defer close(eventChan)
+		for {
+			select {
+			case <-ctx.Done():
+				ds.logger.Info("stopping docker event listener")
+				return
+			case err := <-errStream:
+				if err != nil {
+					ds.logger.Error("docker event stream error", zap.Error(err))
+					// Try to reconnect after a delay
+					time.Sleep(5 * time.Second)
+					eventStream, errStream = ds.client.Events(ctx, options)
+				}
+			case event := <-eventStream:
+				if event.Type == events.ContainerEventType {
+					ds.logger.Debug("docker container event",
+						zap.String("action", string(event.Action)),
+						zap.String("container_id", event.ID),
+						zap.String("container_name", event.Actor.Attributes["name"]))
+					eventChan <- event
+				}
+			}
+		}
+	}()
+
 	return nil
 }
