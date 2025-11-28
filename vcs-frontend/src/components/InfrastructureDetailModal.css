@@ -699,3 +699,175 @@
   background: linear-gradient(135deg, #16a34a, #15803d);
 }
 
+/* DinD Environment Details Styles */
+.dind-details .detail-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 20px;
+  border-bottom: 2px solid #e5e7eb;
+  padding-bottom: 0;
+}
+
+.dind-details .tab-btn {
+  padding: 10px 16px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  color: #6b7280;
+  position: relative;
+  transition: all 0.2s;
+}
+
+.dind-details .tab-btn:hover {
+  color: #3b82f6;
+}
+
+.dind-details .tab-btn.active {
+  color: #3b82f6;
+}
+
+.dind-details .tab-btn.active::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: #3b82f6;
+}
+
+/* Clickable code values */
+.dind-details .clickable {
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: background 0.2s;
+}
+
+.dind-details .clickable:hover {
+  background: #e5e7eb;
+}
+
+.dind-details .badge {
+  background: linear-gradient(135deg, #6366f1, #4f46e5);
+  color: white;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+/* Terminal Section */
+.dind-details .terminal-section {
+  background: #f8fafc;
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.dind-details .terminal-input {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.dind-details .terminal-input input {
+  flex: 1;
+  padding: 10px 14px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-family: 'Courier New', monospace;
+  font-size: 13px;
+}
+
+.dind-details .terminal-input input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.dind-details .terminal-output {
+  background: #1e293b;
+  color: #e2e8f0;
+  padding: 16px;
+  border-radius: 6px;
+  font-family: 'Courier New', monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  max-height: 300px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.dind-details .pull-image-section {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.dind-details .pull-image-section h4 {
+  margin: 0 0 12px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #374151;
+}
+
+/* Tables for containers and images */
+.dind-details .table-container {
+  overflow-x: auto;
+}
+
+.dind-details .detail-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.dind-details .detail-table th,
+.dind-details .detail-table td {
+  padding: 12px;
+  text-align: left;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.dind-details .detail-table th {
+  background: #f9fafb;
+  font-weight: 600;
+  color: #374151;
+}
+
+.dind-details .detail-table tbody tr:hover {
+  background: #f9fafb;
+}
+
+.dind-details .detail-table .code {
+  font-family: 'Courier New', monospace;
+  font-size: 11px;
+  background: #f3f4f6;
+  padding: 2px 6px;
+  border-radius: 3px;
+}
+
+.dind-details .empty-message {
+  text-align: center;
+  color: #6b7280;
+  padding: 24px;
+  font-style: italic;
+}
+
+/* Additional action buttons styling */
+.dind-details .action-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.dind-details .action-buttons .btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+

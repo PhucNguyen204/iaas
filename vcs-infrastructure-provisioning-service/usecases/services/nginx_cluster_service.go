@@ -10,6 +10,7 @@ import (
 
 	"github.com/google/uuid"
 	"go.uber.org/zap"
+	"net"
 
 	"github.com/PhucNguyen204/vcs-infrastructure-provisioning-service/dto"
 	"github.com/PhucNguyen204/vcs-infrastructure-provisioning-service/entities"
@@ -19,9 +20,9 @@ import (
 	"github.com/PhucNguyen204/vcs-infrastructure-provisioning-service/usecases/repositories"
 )
 
+
 // INginxClusterService interface for Nginx cluster operations
 type INginxClusterService interface {
-	// Cluster lifecycle
 	CreateCluster(ctx context.Context, userID string, req dto.CreateNginxClusterRequest) (*dto.NginxClusterInfoResponse, error)
 	GetClusterInfo(ctx context.Context, clusterID string) (*dto.NginxClusterInfoResponse, error)
 	DeleteCluster(ctx context.Context, clusterID string) error
@@ -277,19 +278,12 @@ func (s *nginxClusterService) CreateCluster(ctx context.Context, userID string, 
 	return s.GetClusterInfo(ctx, clusterID)
 }
 
-// createNginxNode creates a single Nginx node with Keepalived
 func (s *nginxClusterService) createNginxNode(ctx context.Context, cluster *entities.NginxCluster, req dto.CreateNginxClusterRequest, index int, networkName, role string, priority int) (*entities.NginxNode, error) {
 	nodeID := uuid.New().String()
 	nodeName := fmt.Sprintf("%s-nginx-%d", cluster.ClusterName, index+1)
+	// tìm port phù hợp thay vì fix cứng
+	httpPort, httpsPort := s.getNextAvailablePortForCluster(cluster)
 
-	// Calculate port offset
-	httpPort := cluster.HTTPPort + index
-	httpsPort := 0
-	if cluster.HTTPSPort > 0 {
-		httpsPort = cluster.HTTPSPort + index
-	}
-
-	// Environment variables for Keepalived
 	env := []string{
 		fmt.Sprintf("NGINX_NODE_NAME=%s", nodeName),
 		fmt.Sprintf("NGINX_NODE_ROLE=%s", role),
@@ -301,7 +295,6 @@ func (s *nginxClusterService) createNginxNode(ctx context.Context, cluster *enti
 		fmt.Sprintf("HTTP_PORT=%d", cluster.HTTPPort),
 	}
 
-	// Port mappings - hostPort:containerPort
 	ports := map[string]string{
 		"80": fmt.Sprintf("%d", httpPort),
 	}
@@ -309,7 +302,6 @@ func (s *nginxClusterService) createNginxNode(ctx context.Context, cluster *enti
 		ports["443"] = fmt.Sprintf("%d", httpsPort)
 	}
 
-	// Create container
 	containerID, err := s.dockerSvc.CreateContainer(ctx, docker.ContainerConfig{
 		Name:         nodeName,
 		Image:        "nginx:alpine",
@@ -1461,7 +1453,7 @@ func (s *nginxClusterService) GetFailoverHistory(ctx context.Context, clusterID 
 	}, nil
 }
 
-// Helper methods
+// helper func() to update infrastructure status
 func (s *nginxClusterService) updateInfraStatus(infraID string, status entities.InfrastructureStatus) {
 	infra, err := s.infraRepo.FindByID(infraID)
 	if err == nil {
@@ -1470,6 +1462,8 @@ func (s *nginxClusterService) updateInfraStatus(infraID string, status entities.
 	}
 }
 
+
+// helper func() to cleanup resources
 func (s *nginxClusterService) cleanup(ctx context.Context, cluster *entities.NginxCluster, networkID string) {
 	nodes, _ := s.clusterRepo.ListNodes(cluster.ID)
 	for _, node := range nodes {
@@ -1486,6 +1480,8 @@ func (s *nginxClusterService) cleanup(ctx context.Context, cluster *entities.Ngi
 	s.infraRepo.Delete(cluster.InfrastructureID)
 }
 
+
+// helper func() to publish events to Kafka
 func (s *nginxClusterService) publishEvent(ctx context.Context, eventType, infraID, clusterID, status string) {
 	if s.kafkaProducer != nil {
 		event := kafka.InfrastructureEvent{
@@ -1500,4 +1496,48 @@ func (s *nginxClusterService) publishEvent(ctx context.Context, eventType, infra
 		}
 		s.kafkaProducer.PublishEvent(ctx, event)
 	}
+}
+
+// helper func() to fincd suitable port
+func (s *nginxClusterService) getNextAvailablePortForCluster(cluster *entities.NginxCluster) (int, int) {
+	nodes, _ := s.clusterRepo.ListNodes(cluster.ID)
+	usedPorts := make(map[int]bool)
+	for _, node := range nodes {
+		usedPorts[node.HTTPPort] = true
+		if node.HTTPSPort > 0 {
+			usedPorts[node.HTTPSPort] = true
+		}
+	}
+
+	httpPort := cluster.HTTPPort
+	for i := 0; i < 100; i++ {
+		candidatePort := cluster.HTTPPort + i
+		if !usedPorts[candidatePort] && s.isPortAvailable(candidatePort) {
+			httpPort = candidatePort
+			break
+		}
+	}
+
+	httpsPort := 0
+	if cluster.HTTPSPort > 0 {
+		for i := 0; i < 100; i++ {
+			candidatePort := cluster.HTTPSPort + i
+			if !usedPorts[candidatePort] && s.isPortAvailable(candidatePort) {
+				httpsPort = candidatePort
+				break
+			}
+		}
+	}
+
+	return httpPort, httpsPort
+}
+
+func (s *nginxClusterService) isPortAvailable(port int) bool {
+	addr := fmt.Sprintf(":%d", port)
+	listener, err := net.Listen("tcp", addr)
+	if err != nil {
+		return false
+	}
+	listener.Close()
+	return true
 }

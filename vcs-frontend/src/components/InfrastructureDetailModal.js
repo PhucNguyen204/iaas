@@ -47,10 +47,13 @@ const InfrastructureDetailModal = ({ isOpen, onClose, resource, onRefresh }) => 
           setDetails(response.data?.data || response.data);
           break;
         
-        case 'DIND_ENVIRONMENT':
-          response = await dinDAPI.getEnvironment(resource.infrastructure_id);
+        case 'DIND_ENVIRONMENT': {
+          // For DinD, we need environment_id from outputs, fallback to infrastructure_id
+          const envId = resource.outputs?.environment_id || resource.infrastructure_id;
+          response = await dinDAPI.getEnvironment(envId);
           setDetails(response.data?.data || response.data);
           break;
+        }
         
         default:
           toast.error('Unsupported infrastructure type');
@@ -1106,11 +1109,23 @@ const PostgresClusterDetails = ({ details, onRefresh, onClose }) => {
 
 const DinDEnvironmentDetails = ({ details, onRefresh, onClose }) => {
   const [deleting, setDeleting] = useState(false);
+  const [starting, setStarting] = useState(false);
+  const [stopping, setStopping] = useState(false);
   const [stats, setStats] = useState(null);
+  const [containers, setContainers] = useState([]);
+  const [images, setImages] = useState([]);
+  const [activeTab, setActiveTab] = useState('info');
+  const [command, setCommand] = useState('');
+  const [commandOutput, setCommandOutput] = useState('');
+  const [executing, setExecuting] = useState(false);
+  const [pullImage, setPullImage] = useState('');
+  const [pulling, setPulling] = useState(false);
 
   useEffect(() => {
     if (details?.id) {
       loadStats();
+      loadContainers();
+      loadImages();
     }
   }, [details]);
 
@@ -1122,6 +1137,28 @@ const DinDEnvironmentDetails = ({ details, onRefresh, onClose }) => {
       }
     } catch (error) {
       console.error('Error loading stats:', error);
+    }
+  };
+
+  const loadContainers = async () => {
+    try {
+      const response = await dinDAPI.listContainers(details.id);
+      if (response.data?.success) {
+        setContainers(response.data.data || []);
+      }
+    } catch (error) {
+      console.error('Error loading containers:', error);
+    }
+  };
+
+  const loadImages = async () => {
+    try {
+      const response = await dinDAPI.listImages(details.id);
+      if (response.data?.success) {
+        setImages(response.data.data || []);
+      }
+    } catch (error) {
+      console.error('Error loading images:', error);
     }
   };
 
@@ -1140,70 +1177,388 @@ const DinDEnvironmentDetails = ({ details, onRefresh, onClose }) => {
     }
   };
 
+  const handleStart = async () => {
+    setStarting(true);
+    try {
+      await dinDAPI.startEnvironment(details.id);
+      toast.success('Environment started successfully');
+      if (onRefresh) onRefresh();
+    } catch (error) {
+      toast.error(`Start failed: ${error.response?.data?.message || error.message}`);
+    } finally {
+      setStarting(false);
+    }
+  };
+
+  const handleStop = async () => {
+    setStopping(true);
+    try {
+      await dinDAPI.stopEnvironment(details.id);
+      toast.success('Environment stopped successfully');
+      if (onRefresh) onRefresh();
+    } catch (error) {
+      toast.error(`Stop failed: ${error.response?.data?.message || error.message}`);
+    } finally {
+      setStopping(false);
+    }
+  };
+
+  const handleExecCommand = async () => {
+    if (!command.trim()) return;
+    setExecuting(true);
+    setCommandOutput('');
+    try {
+      const response = await dinDAPI.execCommand(details.id, command, 60);
+      if (response.data?.success) {
+        setCommandOutput(response.data.data?.output || 'Command executed successfully');
+      } else {
+        setCommandOutput(`Error: ${response.data?.message || 'Unknown error'}`);
+      }
+    } catch (error) {
+      setCommandOutput(`Error: ${error.response?.data?.message || error.message}`);
+    } finally {
+      setExecuting(false);
+    }
+  };
+
+  const handlePullImage = async () => {
+    if (!pullImage.trim()) return;
+    setPulling(true);
+    try {
+      await dinDAPI.pullImage(details.id, pullImage);
+      toast.success(`Image ${pullImage} pulled successfully`);
+      setPullImage('');
+      loadImages();
+    } catch (error) {
+      toast.error(`Pull failed: ${error.response?.data?.message || error.message}`);
+    } finally {
+      setPulling(false);
+    }
+  };
+
+  const copyToClipboard = (text) => {
+    navigator.clipboard.writeText(text);
+    toast.success('Copied to clipboard');
+  };
+
+  const formatBytes = (bytes) => {
+    if (!bytes || bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
+
+  const formatDate = (dateStr) => {
+    if (!dateStr) return '-';
+    return new Date(dateStr).toLocaleString();
+  };
+
   return (
-    <div className="infrastructure-details">
+    <div className="infrastructure-details dind-details">
+      {/* Actions */}
       <div className="detail-section">
         <h3>Actions</h3>
         <div className="action-buttons">
+          {details.status === 'stopped' ? (
+            <button 
+              className="btn btn-sm btn-success" 
+              onClick={handleStart}
+              disabled={starting}
+            >
+              {starting ? <><RefreshCw size={14} className="spin" /> Starting...</> : <><Play size={14} /> Start</>}
+            </button>
+          ) : (
+            <button 
+              className="btn btn-sm btn-warning" 
+              onClick={handleStop}
+              disabled={stopping}
+            >
+              {stopping ? <><RefreshCw size={14} className="spin" /> Stopping...</> : <><Square size={14} /> Stop</>}
+            </button>
+          )}
+          <button 
+            className="btn btn-sm btn-info" 
+            onClick={() => { loadStats(); loadContainers(); loadImages(); }}
+          >
+            <RefreshCw size={14} /> Refresh
+          </button>
           <button 
             className="btn btn-sm btn-danger" 
             onClick={handleDelete}
             disabled={deleting}
           >
-            {deleting ? (
-              <><RefreshCw size={14} className="spin" /> Deleting...</>
-            ) : (
-              <><X size={14} /> Delete</>
-            )}
+            {deleting ? <><RefreshCw size={14} className="spin" /> Deleting...</> : <><X size={14} /> Delete</>}
           </button>
         </div>
       </div>
-      <div className="detail-section">
-        <h3>Basic Information</h3>
-        <div className="detail-grid">
-          <div className="detail-item">
-            <span className="label">Name:</span>
-            <span className="value">{details.name}</span>
-          </div>
-          <div className="detail-item">
-            <span className="label">Status:</span>
-            <StatusBadge status={details.status} />
-          </div>
-          <div className="detail-item">
-            <span className="label">Resource Plan:</span>
-            <span className="value">{details.resource_plan}</span>
-          </div>
-          <div className="detail-item">
-            <span className="label">Container ID:</span>
-            <span className="value code">{details.container_id?.substring(0, 12)}</span>
-          </div>
-        </div>
+
+      {/* Tabs */}
+      <div className="detail-tabs">
+        <button className={`tab-btn ${activeTab === 'info' ? 'active' : ''}`} onClick={() => setActiveTab('info')}>
+          Info
+        </button>
+        <button className={`tab-btn ${activeTab === 'terminal' ? 'active' : ''}`} onClick={() => setActiveTab('terminal')}>
+          Terminal
+        </button>
+        <button className={`tab-btn ${activeTab === 'containers' ? 'active' : ''}`} onClick={() => setActiveTab('containers')}>
+          Containers ({containers.length})
+        </button>
+        <button className={`tab-btn ${activeTab === 'images' ? 'active' : ''}`} onClick={() => setActiveTab('images')}>
+          Images ({images.length})
+        </button>
       </div>
 
-      {stats && (
-        <div className="detail-section">
-          <h3>Statistics</h3>
-          <div className="detail-grid">
-            <div className="detail-item">
-              <span className="label">Containers:</span>
-              <span className="value">{stats.container_count || 0}</span>
+      {/* Tab Content */}
+      {activeTab === 'info' && (
+        <>
+          {/* Basic Information */}
+          <div className="detail-section">
+            <h3>Basic Information</h3>
+            <div className="detail-grid">
+              <div className="detail-item">
+                <span className="label">Environment ID:</span>
+                <span className="value code clickable" onClick={() => copyToClipboard(details.id)}>
+                  {details.id?.substring(0, 8)}... <Copy size={12} />
+                </span>
+              </div>
+              <div className="detail-item">
+                <span className="label">Name:</span>
+                <span className="value">{details.name}</span>
+              </div>
+              <div className="detail-item">
+                <span className="label">Status:</span>
+                <StatusBadge status={details.status} />
+              </div>
+              <div className="detail-item">
+                <span className="label">Resource Plan:</span>
+                <span className="value badge">{details.resource_plan}</span>
+              </div>
             </div>
-            <div className="detail-item">
-              <span className="label">Images:</span>
-              <span className="value">{stats.image_count || 0}</span>
+          </div>
+
+          {/* Connection Info */}
+          <div className="detail-section">
+            <h3>Connection</h3>
+            <div className="detail-grid">
+              <div className="detail-item">
+                <span className="label">Docker Host:</span>
+                <span className="value code clickable" onClick={() => copyToClipboard(details.docker_host)}>
+                  {details.docker_host} <Copy size={12} />
+                </span>
+              </div>
+              <div className="detail-item">
+                <span className="label">IP Address:</span>
+                <span className="value code">{details.ip_address}</span>
+              </div>
+              <div className="detail-item">
+                <span className="label">Container ID:</span>
+                <span className="value code clickable" onClick={() => copyToClipboard(details.container_id)}>
+                  {details.container_id?.substring(0, 12)}... <Copy size={12} />
+                </span>
+              </div>
             </div>
-            <div className="detail-item">
-              <span className="label">Memory Usage:</span>
-              <span className="value">{stats.memory_percent?.toFixed(1) || 0}%</span>
+          </div>
+
+          {/* Resource Limits */}
+          <div className="detail-section">
+            <h3>Resource Limits</h3>
+            <div className="detail-grid">
+              <div className="detail-item">
+                <span className="label">CPU Limit:</span>
+                <span className="value">{details.cpu_limit} cores</span>
+              </div>
+              <div className="detail-item">
+                <span className="label">Memory Limit:</span>
+                <span className="value">{details.memory_limit}</span>
+              </div>
+              <div className="detail-item">
+                <span className="label">Auto Cleanup:</span>
+                <span className="value">{details.auto_cleanup ? 'Yes' : 'No'}</span>
+              </div>
+              <div className="detail-item">
+                <span className="label">TTL:</span>
+                <span className="value">{details.ttl_hours > 0 ? `${details.ttl_hours} hours` : 'No expiration'}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Statistics */}
+          {stats && (
+            <div className="detail-section">
+              <h3>Statistics</h3>
+              <div className="detail-grid">
+                <div className="detail-item">
+                  <span className="label">CPU Usage:</span>
+                  <span className="value">{stats.cpu_usage_percent?.toFixed(1) || 0}%</span>
+                </div>
+                <div className="detail-item">
+                  <span className="label">Memory Usage:</span>
+                  <span className="value">
+                    {formatBytes(stats.memory_usage_bytes)} / {formatBytes(stats.memory_limit_bytes)}
+                    ({stats.memory_usage_percent?.toFixed(1) || 0}%)
+                  </span>
+                </div>
+                <div className="detail-item">
+                  <span className="label">Network RX:</span>
+                  <span className="value">{formatBytes(stats.network_rx_bytes)}</span>
+                </div>
+                <div className="detail-item">
+                  <span className="label">Network TX:</span>
+                  <span className="value">{formatBytes(stats.network_tx_bytes)}</span>
+                </div>
+                <div className="detail-item">
+                  <span className="label">Containers:</span>
+                  <span className="value">{stats.container_count || 0}</span>
+                </div>
+                <div className="detail-item">
+                  <span className="label">Images:</span>
+                  <span className="value">{stats.image_count || 0}</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Timestamps */}
+          <div className="detail-section">
+            <h3>Timestamps</h3>
+            <div className="detail-grid">
+              <div className="detail-item">
+                <span className="label">Created:</span>
+                <span className="value">{formatDate(details.created_at)}</span>
+              </div>
+              <div className="detail-item">
+                <span className="label">Updated:</span>
+                <span className="value">{formatDate(details.updated_at)}</span>
+              </div>
+              {details.expires_at && (
+                <div className="detail-item">
+                  <span className="label">Expires:</span>
+                  <span className="value">{formatDate(details.expires_at)}</span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {details.description && (
+            <div className="detail-section">
+              <h3>Description</h3>
+              <p>{details.description}</p>
+            </div>
+          )}
+        </>
+      )}
+
+      {activeTab === 'terminal' && (
+        <div className="detail-section terminal-section">
+          <h3>Docker Terminal</h3>
+          <div className="terminal-input">
+            <input
+              type="text"
+              placeholder="Enter docker command (e.g., docker ps, docker images)"
+              value={command}
+              onChange={(e) => setCommand(e.target.value)}
+              onKeyPress={(e) => e.key === 'Enter' && handleExecCommand()}
+              disabled={executing || details.status !== 'running'}
+            />
+            <button 
+              className="btn btn-sm btn-primary"
+              onClick={handleExecCommand}
+              disabled={executing || !command.trim() || details.status !== 'running'}
+            >
+              {executing ? <RefreshCw size={14} className="spin" /> : <Play size={14} />}
+              Execute
+            </button>
+          </div>
+          {commandOutput && (
+            <pre className="terminal-output">{commandOutput}</pre>
+          )}
+          
+          <div className="pull-image-section">
+            <h4>Pull Image</h4>
+            <div className="terminal-input">
+              <input
+                type="text"
+                placeholder="Image name (e.g., nginx:latest, redis:7)"
+                value={pullImage}
+                onChange={(e) => setPullImage(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && handlePullImage()}
+                disabled={pulling || details.status !== 'running'}
+              />
+              <button 
+                className="btn btn-sm btn-success"
+                onClick={handlePullImage}
+                disabled={pulling || !pullImage.trim() || details.status !== 'running'}
+              >
+                {pulling ? <RefreshCw size={14} className="spin" /> : <Download size={14} />}
+                Pull
+              </button>
             </div>
           </div>
         </div>
       )}
 
-      {details.description && (
+      {activeTab === 'containers' && (
         <div className="detail-section">
-          <h3>Description</h3>
-          <p>{details.description}</p>
+          <h3>Containers Inside DinD</h3>
+          {containers.length === 0 ? (
+            <p className="empty-message">No containers running</p>
+          ) : (
+            <div className="table-container">
+              <table className="detail-table">
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Image</th>
+                    <th>Status</th>
+                    <th>Names</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {containers.map((container, idx) => (
+                    <tr key={idx}>
+                      <td className="code">{container.id?.substring(0, 12)}</td>
+                      <td>{container.image}</td>
+                      <td><StatusBadge status={container.state} /></td>
+                      <td>{container.names?.join(', ')}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
+      {activeTab === 'images' && (
+        <div className="detail-section">
+          <h3>Images Inside DinD</h3>
+          {images.length === 0 ? (
+            <p className="empty-message">No images available</p>
+          ) : (
+            <div className="table-container">
+              <table className="detail-table">
+                <thead>
+                  <tr>
+                    <th>Repository</th>
+                    <th>Tag</th>
+                    <th>Size</th>
+                    <th>ID</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {images.map((image, idx) => (
+                    <tr key={idx}>
+                      <td>{image.repository || '<none>'}</td>
+                      <td>{image.tag || '<none>'}</td>
+                      <td>{formatBytes(image.size)}</td>
+                      <td className="code">{image.id?.substring(0, 12)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       )}
     </div>

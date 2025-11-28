@@ -100,3 +100,178 @@
   user-select: none;
 }
 
+/* Success View Styles */
+.success-banner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 24px;
+  margin-bottom: 24px;
+}
+
+.success-banner h3 {
+  font-size: 20px;
+  font-weight: 600;
+  color: #10b981;
+  margin: 0;
+}
+
+.created-cluster-info {
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 20px;
+}
+
+.info-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 0;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.info-item:last-child {
+  border-bottom: none;
+}
+
+.info-item label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #6b7280;
+  text-transform: uppercase;
+}
+
+.info-item span {
+  font-size: 14px;
+  color: #1f2937;
+}
+
+.info-value-with-copy {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.info-value-with-copy code {
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 13px;
+  background: #1f2937;
+  color: #10b981;
+  padding: 6px 12px;
+  border-radius: 4px;
+  word-break: break-all;
+}
+
+.cluster-id {
+  font-size: 14px !important;
+  font-weight: 600;
+}
+
+.copy-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
+  background: #e5e7eb;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.copy-btn:hover {
+  background: #d1d5db;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.status-badge.status-creating {
+  background: #fef3c7;
+  color: #d97706;
+}
+
+.status-badge.status-running {
+  background: #d1fae5;
+  color: #059669;
+}
+
+.status-badge.status-stopped {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+/* Nodes list */
+.nodes-list {
+  flex-direction: column;
+}
+
+.nodes-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.node-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+}
+
+.node-name {
+  font-weight: 500;
+  flex: 1;
+}
+
+.node-role {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 4px;
+  text-transform: uppercase;
+}
+
+.node-role.master {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.node-role.backup {
+  background: #f3e8ff;
+  color: #7c3aed;
+}
+
+.node-status {
+  font-size: 11px;
+  font-weight: 500;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.node-status.running {
+  background: #d1fae5;
+  color: #059669;
+}
+
+.node-status.pending {
+  background: #fef3c7;
+  color: #d97706;
+}
+
+.node-status.stopped {
+  background: #fee2e2;
+  color: #dc2626;
+}

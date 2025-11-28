@@ -4,10 +4,10 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/gin-gonic/gin"
 	"github.com/PhucNguyen204/vcs-infrastructure-provisioning-service/dto"
 	"github.com/PhucNguyen204/vcs-infrastructure-provisioning-service/pkg/logger"
 	"github.com/PhucNguyen204/vcs-infrastructure-provisioning-service/usecases/services"
+	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 )
 
@@ -137,18 +137,24 @@ func (h *DinDHandler) ListEnvironments(c *gin.Context) {
 }
 
 // GetEnvironment gets info about a specific DinD environment
+// Supports both environment ID and infrastructure ID
 func (h *DinDHandler) GetEnvironment(c *gin.Context) {
 	id := c.Param("id")
 
+	// First try to get by environment ID
 	env, err := h.dinDService.GetEnvironment(c.Request.Context(), id)
 	if err != nil {
-		c.JSON(http.StatusNotFound, dto.APIResponse{
-			Success: false,
-			Code:    "NOT_FOUND",
-			Message: "Environment not found",
-			Error:   err.Error(),
-		})
-		return
+		// Fallback: try to get by infrastructure ID
+		env, err = h.dinDService.GetEnvironmentByInfraID(c.Request.Context(), id)
+		if err != nil {
+			c.JSON(http.StatusNotFound, dto.APIResponse{
+				Success: false,
+				Code:    "NOT_FOUND",
+				Message: "Environment not found",
+				Error:   err.Error(),
+			})
+			return
+		}
 	}
 
 	c.JSON(http.StatusOK, dto.APIResponse{
@@ -472,4 +478,3 @@ func (h *DinDHandler) GetStats(c *gin.Context) {
 		Data:    resp,
 	})
 }
-

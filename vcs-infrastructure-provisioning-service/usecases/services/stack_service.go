@@ -479,6 +479,15 @@ func (s *stackService) getResourceOutputs(ctx context.Context, resourceType, inf
 				}
 			}
 		}
+	case "DIND_ENVIRONMENT":
+		if dindEnv, err := s.dindService.GetEnvironmentByInfraID(ctx, infraID); err == nil {
+			outputs["environment_id"] = dindEnv.ID
+			outputs["container_id"] = dindEnv.ContainerID
+			outputs["docker_host"] = dindEnv.DockerHost
+			outputs["ip_address"] = dindEnv.IPAddress
+			outputs["resource_plan"] = dindEnv.ResourcePlan
+			outputs["status"] = dindEnv.Status
+		}
 	}
 
 	return outputs
